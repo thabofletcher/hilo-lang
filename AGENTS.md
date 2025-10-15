@@ -148,3 +148,5 @@ workflow ArticleFlow {
 - Include `test` blocks for critical behaviors.
 
 See `project/src/` for a complete example.
+
+> For known gaps between the published grammar and the sample project, consult `agent-findings.md`.

@@ -1,0 +1,8 @@
+{
+  "name": "sample-hilo-project",
+  "version": "1.0.0",
+  "module": "org.example.hilo.project",
+  "entry": "src/main.hilo",
+  "description": "Sample multi-agent project in HILO pseudocode",
+  "created": "2025-10-15"
+}

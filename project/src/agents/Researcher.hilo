@@ -1,0 +1,41 @@
+module org.example.hilo.project.agents
+
+import core.io
+import core.text
+import core.collections
+import core.net
+
+agent Researcher {
+  profile {
+    name: "Researcher"
+    purpose: "Find sources and extract concise notes."
+    style: { tone: "neutral", citations: "required" }
+  }
+
+  capabilities {
+    inputs:  { topic: String }
+    outputs: { notes: List[String], sources: List[String] }
+  }
+
+  tools {
+    web.search(query: String, max_results: Int = 5) -> List[String]
+    web.open(url: String) -> { title: String, text: String, url: String }
+  }
+
+  policy {
+    refuse.chain_of_thought = true
+    cite.sources.min = 2
+  }
+
+  func run(topic: String) -> Result[Map[String,Any], Error] {
+    let urls = web.search(topic, max_results=5)
+    let pages = urls |> map(fn(u) -> web.open(u))
+
+    let notes = pages |> map(fn(p)
+      -> String {
+        return summarize.extractive(p.text, max=80)
+      })
+
+    return Ok({ "notes": notes, "sources": urls })
+  }
+}

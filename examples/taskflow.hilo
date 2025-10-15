@@ -1,0 +1,14 @@
+module examples.taskflow
+import core.io
+
+func square(n: Int) -> Int { return n * n }
+
+task compute() {
+  let xs = [1,2,3,4,5]
+  let ys = xs |> map(fn (x: Int) -> Int { return square(x) })
+  io.print(ys)
+}
+
+workflow Demo {
+  start compute()
+}

@@ -1,0 +1,14 @@
+module org.example.hilo.project.tests
+
+import org.example.hilo.project
+import org.example.hilo.project.modules
+
+test "slugify works" {
+  assert modules.slugify("Hello World") == "hello-world"
+}
+
+test "ProduceBrief composes agents" {
+  // This is a smoke test sketch; a real runtime would mock tools/web.
+  let brief = project.ProduceBrief("HILO")
+  assert brief.title starts_with "Brief: "
+}

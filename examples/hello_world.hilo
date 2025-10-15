@@ -1,0 +1,9 @@
+module examples.hello
+
+func greet(name: String = "world") -> String {
+  return "Hello, " + name + "!"
+}
+
+task main() {
+  io.print(greet())
+}

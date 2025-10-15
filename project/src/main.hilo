@@ -1,0 +1,39 @@
+module org.example.hilo.project
+
+import core.io
+import core.text { trim, join } as T
+import org.example.hilo.project.agents.Researcher
+import org.example.hilo.project.agents.Writer
+import org.example.hilo.project.agents.Reviewer
+
+record Brief {
+  title: String
+  body: String
+  sources: List[String]
+}
+
+/// Produce a brief on a topic using three agents.
+task ProduceBrief(topic: String) -> Brief {
+  let research = Researcher.run(topic)
+  match research {
+    Ok(data) => {
+      let draft = Writer.run(data["notes"], data["sources"], audience="Engineer")
+      let rr = Reviewer.run(draft, data["sources"])
+      return Brief {
+        title: "Brief: " + topic,
+        body: rr["revised"],
+        sources: data["sources"]
+      }
+    }
+    Err(e) => { throw e }
+  }
+}
+
+workflow Main {
+  start {
+    let brief = ProduceBrief("HILO Language")
+    io.print("=== " + brief.title + " ===")
+    io.print(brief.body)
+    io.print("Sources: " + T.join(brief.sources, ", "))
+  }
+}

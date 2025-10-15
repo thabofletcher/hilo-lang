@@ -1,0 +1,7 @@
+module org.example.hilo.project.modules
+
+export func slugify(s: String) -> String {
+  let lower = core.text.lower(s)
+  let parts = core.text.split(lower, " ")
+  return core.text.join(parts, "-")
+}

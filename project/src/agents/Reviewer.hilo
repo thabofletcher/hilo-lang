@@ -1,0 +1,30 @@
+module org.example.hilo.project.agents
+
+import core.text as T
+
+agent Reviewer {
+  profile {
+    name: "Reviewer"
+    purpose: "Improve clarity and check basic quality."
+  }
+
+  capabilities {
+    inputs:  { draft: String, sources: List[String] }
+    outputs: { report: String, revised: String }
+  }
+
+  policy {
+    refuse.chain_of_thought = true
+    cite.sources.min = 2
+  }
+
+  func run(draft: String, sources: List[String]) -> Map[String,String] {
+    let issues = []
+    if T.trim(draft) == "" { issues = issues + ["Draft is empty."] }
+    if sources == [] { issues = issues + ["No sources provided."] }
+
+    let report = if issues == [] { "OK" } else { "Issues: " + T.join(issues, "; ") }
+    let revised = draft + "\n\nSources (" + T.join(sources, ", ") + ")"
+    return { "report": report, "revised": revised }
+  }
+}

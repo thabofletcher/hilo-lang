@@ -1,0 +1,25 @@
+module org.example.hilo.project.agents
+
+import core.text as T
+
+agent Writer {
+  profile {
+    name: "Writer"
+    purpose: "Compose a brief, actionable draft."
+    style: { tone: "succinct", audience: "Engineer" }
+  }
+
+  capabilities {
+    inputs:  { notes: List[String], sources: List[String], audience?: String }
+    outputs: { draft: String }
+  }
+
+  policy { refuse.chain_of_thought = true }
+
+  func run(notes: List[String], sources: List[String], audience?: String) -> String {
+    let title = "Overview"
+    let body = T.join(notes, "\n- ")
+    let closing = "\n\n(See sources for details.)"
+    return "# " + title + "\n- " + body + closing
+  }
+}

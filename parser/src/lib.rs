@@ -105,6 +105,21 @@ mod tests {
                 assert_eq!(record.name, "Brief");
                 assert_eq!(record.fields.len(), 3);
                 assert_eq!(record.fields[0].name, "title");
+                match &record.fields[0].ty {
+                    ast::TypeExpr::Simple(path) => {
+                        assert_eq!(path, &vec![String::from("String")]);
+                    }
+                    other => panic!("expected simple string type, got {:?}", other),
+                }
+                match &record.fields[2].ty {
+                    ast::TypeExpr::List(inner) => match inner.as_ref() {
+                        ast::TypeExpr::Simple(path) => {
+                            assert_eq!(path, &vec![String::from("String")]);
+                        }
+                        other => panic!("expected list of string type, got {:?}", other),
+                    },
+                    other => panic!("expected list type, got {:?}", other),
+                }
             }
             other => panic!("expected record, got {:?}", other),
         }
@@ -125,6 +140,57 @@ mod tests {
                 assert!(flow.body.raw.contains("start"));
             }
             other => panic!("expected workflow, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parses_complex_type_shapes() {
+        let src = r#"
+            record Complex<T> {
+              items?: List[Map[String, Int]?]
+              props: { key: String, value?: Int }
+            }
+        "#;
+
+        let module = parse_module(src).expect("parser should succeed");
+        assert_eq!(module.items.len(), 1);
+
+        let record = match &module.items[0] {
+            ast::Item::Record(record) => record,
+            other => panic!("expected record, got {:?}", other),
+        };
+
+        assert_eq!(record.name, "Complex");
+        assert_eq!(record.type_params, vec![String::from("T")]);
+        assert_eq!(record.fields.len(), 2);
+
+        let items_field = &record.fields[0];
+        assert_eq!(items_field.name, "items");
+        assert!(items_field.optional);
+        match &items_field.ty {
+            ast::TypeExpr::List(inner) => match inner.as_ref() {
+                ast::TypeExpr::Optional(inner) => match inner.as_ref() {
+                    ast::TypeExpr::Generic { base, arguments } => {
+                        assert_eq!(base, &vec![String::from("Map")]);
+                        assert_eq!(arguments.len(), 2);
+                    }
+                    other => panic!("expected generic map, got {:?}", other),
+                },
+                other => panic!("expected optional inner, got {:?}", other),
+            },
+            other => panic!("expected list type, got {:?}", other),
+        }
+
+        let props_field = &record.fields[1];
+        match &props_field.ty {
+            ast::TypeExpr::Struct(fields) => {
+                assert_eq!(fields.len(), 2);
+                assert_eq!(fields[0].name, "key");
+                assert!(!fields[0].optional);
+                assert_eq!(fields[1].name, "value");
+                assert!(fields[1].optional);
+            }
+            other => panic!("expected struct type, got {:?}", other),
         }
     }
 }

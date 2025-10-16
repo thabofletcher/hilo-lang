@@ -385,30 +385,220 @@ fn parse_params(src: &str) -> Vec<ast::Param> {
 }
 
 fn parse_type_expr(raw: &str) -> ast::TypeExpr {
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return ast::TypeExpr::Unknown(String::new());
+    TypeParser::new(raw).parse()
+}
+
+struct TypeParser<'a> {
+    src: &'a str,
+    idx: usize,
+}
+
+impl<'a> TypeParser<'a> {
+    fn new(src: &'a str) -> Self {
+        Self {
+            src: src.trim(),
+            idx: 0,
+        }
     }
-    if trimmed.ends_with('?') {
-        let inner = trimmed[..trimmed.len() - 1].trim();
-        return ast::TypeExpr::Optional(Box::new(parse_type_expr(inner)));
+
+    fn parse(mut self) -> ast::TypeExpr {
+        if self.src.is_empty() {
+            return ast::TypeExpr::Unknown(String::new());
+        }
+        match self.parse_type_with_optional() {
+            Some(ty) => {
+                self.skip_ws();
+                if self.idx < self.src.len() {
+                    ast::TypeExpr::Unknown(self.src.trim().to_string())
+                } else {
+                    ty
+                }
+            }
+            None => ast::TypeExpr::Unknown(self.src.trim().to_string()),
+        }
     }
-    if trimmed.contains(' ')
-        || trimmed.contains('[')
-        || trimmed.contains('<')
-        || trimmed.contains('{')
-    {
-        return ast::TypeExpr::Unknown(trimmed.to_string());
+
+    fn parse_type_with_optional(&mut self) -> Option<ast::TypeExpr> {
+        let mut ty = self.parse_type_inner()?;
+        self.skip_ws();
+        if self.peek_char() == Some('?') {
+            self.idx += 1;
+            ty = ast::TypeExpr::Optional(Box::new(ty));
+        }
+        Some(ty)
     }
-    let parts: Vec<_> = trimmed
-        .split('.')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
-    if parts.is_empty() {
-        ast::TypeExpr::Unknown(trimmed.to_string())
-    } else {
-        ast::TypeExpr::Simple(parts)
+
+    fn parse_type_inner(&mut self) -> Option<ast::TypeExpr> {
+        self.skip_ws();
+        if self.idx >= self.src.len() {
+            return None;
+        }
+
+        if self.peek_char() == Some('{') {
+            self.idx += 1;
+            let fields = self.parse_struct_fields();
+            return Some(ast::TypeExpr::Struct(fields));
+        }
+
+        let base = self.parse_qualified_identifier();
+        if base.is_empty() {
+            return None;
+        }
+
+        self.skip_ws();
+        if self.consume('<') {
+            let args = self.parse_type_arguments('>');
+            return Some(ast::TypeExpr::Generic {
+                base,
+                arguments: args,
+            });
+        }
+
+        self.skip_ws();
+        if self.consume('[') {
+            self.skip_ws();
+            if base.len() == 1 && base[0] == "List" {
+                let elem_ty = if self.peek_char() == Some(']') {
+                    self.idx += 1;
+                    ast::TypeExpr::Simple(base)
+                } else {
+                    let ty = self
+                        .parse_type_with_optional()
+                        .unwrap_or(ast::TypeExpr::Unknown(String::new()));
+                    self.skip_ws();
+                    let _ = self.consume(']');
+                    ty
+                };
+                return Some(ast::TypeExpr::List(Box::new(elem_ty)));
+            } else {
+                let args = self.parse_type_arguments(']');
+                return Some(ast::TypeExpr::Generic {
+                    base,
+                    arguments: args,
+                });
+            }
+        }
+
+        Some(ast::TypeExpr::Simple(base))
+    }
+
+    fn parse_struct_fields(&mut self) -> Vec<ast::StructFieldType> {
+        let mut fields = Vec::new();
+        loop {
+            self.skip_ws();
+            if self.peek_char() == Some('}') {
+                self.idx += 1;
+                break;
+            }
+
+            let mut name = self.parse_identifier();
+            if name.is_empty() {
+                break;
+            }
+            let mut optional = false;
+            if name.ends_with('?') {
+                name = name.trim_end_matches('?').to_string();
+                optional = true;
+            }
+
+            self.skip_ws();
+            if !self.consume(':') {
+                break;
+            }
+
+            let ty = self
+                .parse_type_with_optional()
+                .unwrap_or(ast::TypeExpr::Unknown(String::new()));
+            fields.push(ast::StructFieldType { name, optional, ty });
+
+            self.skip_ws();
+            if !self.consume(',') {
+                self.skip_ws();
+                if self.peek_char() == Some('}') {
+                    self.idx += 1;
+                }
+                break;
+            }
+        }
+        fields
+    }
+
+    fn parse_type_arguments(&mut self, closing: char) -> Vec<ast::TypeExpr> {
+        let mut args = Vec::new();
+        loop {
+            self.skip_ws();
+            if self.peek_char() == Some(closing) {
+                self.idx += closing.len_utf8();
+                break;
+            }
+            let arg = self
+                .parse_type_with_optional()
+                .unwrap_or(ast::TypeExpr::Unknown(String::new()));
+            args.push(arg);
+            self.skip_ws();
+            if self.consume(closing) {
+                break;
+            }
+            let _ = self.consume(',');
+        }
+        args
+    }
+
+    fn parse_qualified_identifier(&mut self) -> Vec<String> {
+        let mut parts = Vec::new();
+        loop {
+            let ident = self.parse_identifier();
+            if ident.is_empty() {
+                break;
+            }
+            parts.push(ident);
+            self.skip_ws();
+            if !self.consume('.') {
+                break;
+            }
+        }
+        parts
+    }
+
+    fn parse_identifier(&mut self) -> String {
+        self.skip_ws();
+        let start = self.idx;
+        while self.idx < self.src.len() {
+            if let Some(ch) = self.peek_char() {
+                if ch == '_' || ch.is_alphanumeric() || ch == '?' {
+                    self.idx += ch.len_utf8();
+                    continue;
+                }
+            }
+            break;
+        }
+        self.src[start..self.idx].trim().to_string()
+    }
+
+    fn skip_ws(&mut self) {
+        while self.idx < self.src.len() {
+            if let Some(ch) = self.peek_char() {
+                if ch.is_whitespace() {
+                    self.idx += ch.len_utf8();
+                    continue;
+                }
+            }
+            break;
+        }
+    }
+
+    fn consume(&mut self, ch: char) -> bool {
+        self.skip_ws();
+        if self.peek_char() == Some(ch) {
+            self.idx += ch.len_utf8();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn peek_char(&self) -> Option<char> {
+        self.src[self.idx..].chars().next()
     }
 }
 

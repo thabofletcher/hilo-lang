@@ -75,6 +75,19 @@ pub struct Block {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeExpr {
     Simple(QualifiedName),
+    Generic {
+        base: QualifiedName,
+        arguments: Vec<TypeExpr>,
+    },
+    List(Box<TypeExpr>),
+    Struct(Vec<StructFieldType>),
     Optional(Box<TypeExpr>),
     Unknown(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StructFieldType {
+    pub name: Ident,
+    pub optional: bool,
+    pub ty: TypeExpr,
 }

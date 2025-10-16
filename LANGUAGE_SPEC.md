@@ -85,7 +85,7 @@ and built-in constructs for agents, tasks, and workflows.
   }
   ```
 
-- **Function types**: `(A, B) -> C`. Lambdas: `fn (x: A, y: B) -> C { ... }`.
+- **Function types**: `(A, B) -> C`. Lambdas may omit types and use expression bodies: `fn (x, y) => x + y`.
 
 - **Nullability**: use `Option[T]` or `?` suffix for fields (records/classes). `expr ?? fallback` for coalesce; `expr?.prop` for optional chaining.
 
@@ -113,6 +113,8 @@ for x in list { ... }
 while cond { ... }
 break; continue
 ```
+
+- **Boolean precedence**: `and` binds tighter than `or`, matching most algebraic logics.
 
 **Pattern matching**:
 
@@ -154,7 +156,21 @@ func connect(host: String, port: Int = 443, secure: Bool = true) -> Conn { ... }
 let c = connect(port=8443, host="example.com")
 ```
 
+- Single-expression bodies can use arrow shorthand: `func area(r: Float) -> Float => PI * r * r`.
+- Prefix `async` to mark asynchronous functions: `async func fetch(url: String) -> Bytes { ... }`.
 - `@pure` indicates no IO/tool calls; `@memo` enables caching.
+
+### Pipelines and Invocation
+
+- `a |> f` passes `a` as the first argument to `f` without copying when the runtime can borrow or move.
+- Chained pipelines (`data |> normalize |> analyze`) are left-associative.
+- The right-hand side may include calls or member access (`xs |> stats.mean()`), evaluated after the pipe forwarding occurs.
+
+### Map & Struct Literals
+
+- `map { key: value }` infers key/value types from entries; annotate with `Map[K,V]` when inference is ambiguous.
+- Struct literals (`User { name: "Ada" }`) initialize records/classes positionally by field name.
+- Structural type literals (`{ title: String, url: String }`) describe anonymous record shapes used in tool signatures and capability definitions.
 
 ---
 

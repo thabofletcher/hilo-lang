@@ -7,7 +7,11 @@ A semicolon `;` is optional when the newline is present.
 Program        = ModuleDecl? Import* TopLevel* ;
 
 ModuleDecl     = "module" QName ;
-Import         = "import" ImportPath ( "as" IDENT )? ( "{" IdentList "}" )? ;
+Import         = "import" ImportPath ImportTail? ;
+ImportTail     = ImportAlias ( ImportList )?
+               | ImportList ( ImportAlias )? ;
+ImportAlias    = "as" IDENT ;
+ImportList     = "{" IdentList "}" ;
 ImportPath     = QName ;
 IdentList      = IDENT ( "," IDENT )* ;
 QName          = IDENT ( "." IDENT )* ;
@@ -25,7 +29,7 @@ VarDecl        = "var" IDENT ( ":" Type )? ( "=" Expr )? ;
 
 TypeDecl       = "type" IDENT TypeParams? "=" Type ;
 RecordDecl     = "record" IDENT TypeParams? "{" FieldDecl* "}" ;
-FieldDecl      = IDENT ":" Type ( "=" Expr )? ;
+FieldDecl      = IDENT "?"? ":" Type ( "=" Expr )? ;
 
 EnumDecl       = "enum" IDENT TypeParams? "{" EnumCase ("," EnumCase)* "}" ;
 EnumCase       = IDENT TypeArgs? ( "(" ParamList? ")" )? ;
@@ -38,8 +42,8 @@ ClassMember    = FieldDecl | FuncDecl | CtorDecl | PropDecl ;
 CtorDecl       = "new" "(" ParamList? ")" Block ;
 PropDecl       = "prop" IDENT ":" Type ( "get" Block )? ( "set" Block )? ;
 
-FuncDecl       = "func" IDENT TypeParams? "(" ParamList? ")" ( "->" Type )? Block ;
-FuncSig        = "func" IDENT TypeParams? "(" ParamList? ")" ( "->" Type )? ;
+FuncDecl       = "async"? "func" IDENT TypeParams? "(" ParamList? ")" ( "->" Type )? ( Block | "=>" Expr ) ;
+FuncSig        = "async"? "func" IDENT TypeParams? "(" ParamList? ")" ( "->" Type )? ;
 ParamList      = Param ( "," Param )* ;
 Param          = IDENT ":" Type ( "=" Expr )? ;
 
@@ -47,11 +51,17 @@ TypeParams     = "<" IDENT ( "," IDENT )* ">" ;
 TypeArgs       = "<" Type ( "," Type )* ">" ;
 
 AgentDecl      = "agent" IDENT "{" AgentMember* "}" ;
-AgentMember    = "profile" Block
-               | "capabilities" Block
-               | "tools" Block
-               | "policy" Block
+AgentMember    = ProfileBlock
+               | CapabilitiesBlock
+               | ToolsBlock
+               | PolicyBlock
                | FuncDecl ;
+ProfileBlock   = "profile" Block ;
+CapabilitiesBlock = "capabilities" "{" CapabilityEntry+ "}" ;
+CapabilityEntry = IDENT ":" StructLiteral ;
+ToolsBlock     = "tools" "{" ToolDecl* "}" ;
+PolicyBlock    = "policy" Block ;
+ToolDecl       = QName "(" ParamList? ")" "->" Type ;
 
 TaskDecl       = "task" IDENT "(" ParamList? ")" ( "->" Type )? Block ;
 
@@ -64,10 +74,10 @@ Block          = "{" Stmt* "}" ;
 Stmt           = SimpleStmt
                | IfStmt | WhileStmt | ForStmt | MatchStmt
                | TryStmt | UsingStmt | DeferStmt
-               | ReturnStmt | BreakStmt | ContinueStmt
+               | ReturnStmt | BreakStmt | ContinueStmt | ThrowStmt
                | SpawnStmt | ChannelStmt | SendStmt | RecvStmt | SelectStmt ;
 
-SimpleStmt     = VarDecl | LetDecl | ExprStmt ;
+SimpleStmt     = VarDecl | LetDecl | LabelStmt | ExprStmt ;
 
 IfStmt         = "if" Expr Block ( "else" ( IfStmt | Block ) )? ;
 WhileStmt      = "while" Expr Block ;
@@ -83,6 +93,7 @@ DeferStmt      = "defer" Block ;
 ReturnStmt     = "return" Expr? ;
 BreakStmt      = "break" ;
 ContinueStmt   = "continue" ;
+ThrowStmt      = "throw" Expr ;
 
 SpawnStmt      = "spawn" Expr ;
 ChannelStmt    = "channel" "<" Type ">" "(" ( "capacity" "=" INT )? ")" ;
@@ -92,6 +103,7 @@ SelectStmt     = "select" "{" SelectCase+ ( "timeout" Duration "=>" Block )? "}"
 SelectCase     = ( "send" Expr "<-" Expr | "recv" Expr "->" IDENT ) "=>" Block ;
 
 ExprStmt       = Expr ;
+LabelStmt      = IDENT ":" Expr ;
 
 Expr           = Assign ;
 Assign         = Or ( "=" Or )? ;
@@ -101,34 +113,44 @@ Cmp            = Add ( ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) Add )* ;
 Add            = Mul ( ( "+" | "-" ) Mul )* ;
 Mul            = Unary ( ( "*" | "/" | "%" ) Unary )* ;
 Unary          = ( "-" | "not" | "await" ) Unary | Postfix ;
-Postfix        = Primary ( Call | Index | Field | OptChain | Pipe )* ;
+Postfix        = Primary ( Call | Index | Field | OptChain | Pipe | Init )* ;
 Call           = "(" ArgList? ")" ;
 ArgList        = Arg ( "," Arg )* ;
-Arg            = ( IDENT ":" )? Expr ;
+Arg            = ( IDENT ":" | IDENT "=" )? Expr ;
 Index          = "[" Expr "]" ;
 Field          = "." IDENT ;
 OptChain       = "?." IDENT ;
-Pipe           = "|>" Primary ;   // simple, left-associative
+Pipe           = "|>" Primary ( Call | Index | Field | OptChain )* ;
+Init           = StructLiteral ;
 
 Primary        = INT | FLOAT | STRING | "true" | "false" | "null"
                | IDENT
                | "(" Expr ")"
                | Lambda
-               | ListLit | MapLit | TupleLit ;
+               | ListLit | MapLit | TupleLit | StructLiteral ;
 
-Lambda         = "fn" "(" ParamList? ")" ( "->" Type )? Block ;
+Lambda         = "fn" "(" LambdaParams? ")" LambdaReturn? LambdaBody ;
+LambdaParams   = LambdaParam ( "," LambdaParam )* ;
+LambdaParam    = IDENT ( ":" Type )? ( "=" Expr )? ;
+LambdaReturn   = "->" Type ;
+LambdaBody     = Block | "=>" Expr | Expr ;
 ListLit        = "[" ( Expr ( "," Expr )* )? "]" ;
 MapLit         = "map" "{" ( (Expr ":" Expr) ( "," Expr ":" Expr )* )? "}" ;
 TupleLit       = "(" Expr "," Expr ( "," Expr )* ")" ;
+StructLiteral  = "{" StructField ( "," StructField )* "}" ;
+StructField    = IDENT ":" Expr ;
 
 Pattern        = "_" | IDENT | Literal | RecordPat | EnumPat | TuplePat ;
 RecordPat      = IDENT "{" ( IDENT ( ":" Pattern )? ( "," IDENT ( ":" Pattern )? )* )? "}" ;
 EnumPat        = IDENT ( "." IDENT )? ( "(" Pattern ( "," Pattern )* ")" )? ;
 TuplePat       = "(" Pattern "," Pattern ( "," Pattern )* ")" ;
 
-Type           = QName TypeArgs?
+Type           = SimpleType "?"? ;
+SimpleType     = QName TypeArgs?
                | ListType | MapType | TupleType
-               | FuncType ;
+               | FuncType | StructType ;
+StructType     = "{" TypeField ( "," TypeField )* "}" ;
+TypeField      = IDENT ":" Type ;
 
 ListType       = "List" "[" Type "]" | "[" Type "]" ;
 MapType        = "Map" "[" Type "," Type "]" ;
@@ -140,6 +162,7 @@ INT            = /-?[0-9]+/ ;
 FLOAT          = /-?[0-9]+\\.[0-9]+/ ;
 STRING         = /"([^"\\\\]|\\\\.)*"/ ;
 Duration       = /"[0-9]+(ms|s|m|h|d)"/ ;
+Literal        = INT | FLOAT | STRING | "true" | "false" | "null" ;
 ```
 
 Notes:

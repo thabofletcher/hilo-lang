@@ -1,47 +1,29 @@
 # Agent Findings — Grammar vs Sample Code
 
-This log captures discrepancies spotted between `GRAMMAR.md` and the sample project. Each entry highlights why a parser built strictly from the published grammar would reject the accompanying code.
+This log tracks QA findings for the HILO surface area. Items move to “Resolved” once the spec and samples align.
 
-- **Import alias order** — Grammar requires `import path as Alias { … }`, but the project uses `import path { … } as Alias` (`project/src/main.hilo:4`).
-- **Agent tools signatures** — Grammar treats `tools { … }` as a block of statements; the project lists bare signatures such as `web.search(...) -> …` (`project/src/agents/Researcher.hilo:20-23`), which the grammar cannot parse.
-- **Inline record return types** — `{ title: String, text: String, url: String }` in `web.open` (`project/src/agents/Researcher.hilo:22`) is unsupported because `Type` only permits named, generic, tuple, or function types.
-- **Capabilities blocks** — Lines like `inputs: { topic: String }` (`project/src/agents/Researcher.hilo:15-18`) have no corresponding production; the grammar doesn’t allow key–value pairs inside agent capability blocks.
-- **Named arguments syntax** — Calls such as `Writer.run(..., audience="Engineer")` (`project/src/main.hilo:20`) contradict the grammar, which defines named arguments as `name: value`.
-- **Record instantiation literal** — Constructing a record via `Brief { … }` (`project/src/main.hilo:22-26`) lacks grammar support; there’s no rule for pairing an identifier with an inline initializer.
-- **Lambda subsets** — Lambdas in the repo omit parameter types and use expression bodies (`project/src/agents/Researcher.hilo:32-36`), but the grammar insists on typed parameters and a block body (`GRAMMAR.md:119-120`).
-- **Pipeline invocation** — `urls |> map(fn ...)` (`project/src/agents/Researcher.hilo:32`) expects the pipe target to be callable; the grammar’s `Pipe = "|>" Primary` (`GRAMMAR.md:111`) doesn’t permit the subsequent `Call`, so this syntax can’t be parsed.
-- **Throw statements missing** — Exception paths rely on `throw e` (`project/src/main.hilo:28`), yet `Stmt` lacks a `ThrowStmt` production (`GRAMMAR.md:63-92`), leaving no way to express `throw`.
-- **Async keyword gap** — The spec uses `async func fetch(...)` (`LANGUAGE_SPEC.md:183-190`), but `FuncDecl` has no allowance for an `async` modifier (`GRAMMAR.md:41`), so the advertised async support can’t be implemented.
-- **Optional field/type markers** — Examples show `email?: String` (`LANGUAGE_SPEC.md:59`) and `String?` (`INTEROP.md:17`), but `FieldDecl` (`GRAMMAR.md:28`) and `Type` (`GRAMMAR.md:129-136`) don’t include `?`, blocking nullable shorthand.
-- **Undefined literal pattern** — `Pattern` references `Literal` (`GRAMMAR.md:124`), yet `Literal` is never defined, so literal matches cannot be parsed.
+## Resolved Inconsistencies (P0 blockers)
 
-## Inconsistencies (Blockers for Parsing / Semantics)
+- Import alias order now supports both `import path as Alias { … }` and `import path { … } as Alias` (`GRAMMAR.md:8-14`).
+- Tools blocks accept signature-style declarations (`GRAMMAR.md:52-60`), matching `project/src/agents/Researcher.hilo:20-23`.
+- Inline record/struct types are legal in signatures via `StructType` (`GRAMMAR.md:146-149`).
+- Capability entries parse as labeled struct literals (`GRAMMAR.md:54-57`).
+- Named arguments accept `name=value` syntax (`GRAMMAR.md:109-111`).
+- Record construction via `Type { field: value }` is handled by postfix initializers (`GRAMMAR.md:102-114`).
+- Lambdas allow optional types and expression bodies (`GRAMMAR.md:118-123`).
+- Pipelines can invoke call/member chains on the RHS (`GRAMMAR.md:105-108`), covering `urls |> map(...)`.
+- `throw` statements are first-class (`GRAMMAR.md:82-90`), reflecting `project/src/main.hilo:28`.
+- `async func` is supported in function signatures and decls (`GRAMMAR.md:40-45`).
+- Optional field/type suffix `?` is part of the grammar (`GRAMMAR.md:20-23`, `GRAMMAR.md:141-149`).
+- `Literal` is defined and usable in pattern matching (`GRAMMAR.md:153-154`).
+- Boolean precedence is documented in the spec (`LANGUAGE_SPEC.md:103`).
 
-- **Import alias order** — Grammar requires `import path as Alias { … }`, but the project uses `import path { … } as Alias` (`project/src/main.hilo:4`).
-- **Agent tools signatures** — Grammar treats `tools { … }` as a block of statements; the project lists bare signatures such as `web.search(...) -> …` (`project/src/agents/Researcher.hilo:20-23`), which the grammar cannot parse.
-- **Inline record return types** — `{ title: String, text: String, url: String }` in `web.open` (`project/src/agents/Researcher.hilo:22`) is unsupported because `Type` only permits named, generic, tuple, or function types.
-- **Capabilities blocks** — Lines like `inputs: { topic: String }` (`project/src/agents/Researcher.hilo:15-18`) have no corresponding production; the grammar doesn’t allow key–value pairs inside agent capability blocks.
-- **Named arguments syntax** — Calls such as `Writer.run(..., audience="Engineer")` (`project/src/main.hilo:20`) contradict the grammar, which defines named arguments as `name: value`.
-- **Record instantiation literal** — Constructing a record via `Brief { … }` (`project/src/main.hilo:22-26`) lacks grammar support; there’s no rule for pairing an identifier with an inline initializer.
-- **Lambda subsets** — Lambdas in the repo omit parameter types and use expression bodies (`project/src/agents/Researcher.hilo:32-36`), but the grammar insists on typed parameters and a block body (`GRAMMAR.md:119-120`).
-- **Pipeline invocation** — `urls |> map(fn ...)` (`project/src/agents/Researcher.hilo:32`) expects the pipe target to be callable; the grammar’s `Pipe = "|>" Primary` (`GRAMMAR.md:111`) doesn’t permit the subsequent `Call`, so this syntax can’t be parsed.
-- **Throw statements missing** — Exception paths rely on `throw e` (`project/src/main.hilo:28`), yet `Stmt` lacks a `ThrowStmt` production (`GRAMMAR.md:63-92`), leaving no way to express `throw`.
-- **Async keyword gap** — The spec uses `async func fetch(...)` (`LANGUAGE_SPEC.md:183-190`), but `FuncDecl` has no allowance for an `async` modifier (`GRAMMAR.md:41`), so the advertised async support can’t be implemented.
-- **Optional field/type markers** — Examples show `email?: String` (`LANGUAGE_SPEC.md:59`) and `String?` (`INTEROP.md:17`), but `FieldDecl` (`GRAMMAR.md:28`) and `Type` (`GRAMMAR.md:129-136`) don’t include `?`, blocking nullable shorthand.
-- **Undefined literal pattern** — `Pattern` references `Literal` (`GRAMMAR.md:124`), yet `Literal` is never defined, so literal matches cannot be parsed.
-- **Boolean operator precedence** — Grammar chains `or` before `and` (`GRAMMAR.md:98-99`); the spec never states that ordering, risking mismatch with user expectations set by mainstream languages.
+## Open Performance / Semantic Questions
 
-## Performance/Semantic Concerns
+- None outstanding after clarifying pipeline borrowing semantics and map typing (`LANGUAGE_SPEC.md:97-122`).
 
-- **Collection pipe semantics** — No spec guidance on whether `|>` copies collections or passes views; without clarity, implementing efficient, zero-copy pipelines across platforms is risky.
-- **Map literal typing** — `map { key: value }` lacks typing rules; a Java backend needs declared key/value types or inference strategy to avoid boxing everything as `Object`.
+## Standard Library Coverage
 
-## Standard Library Gaps
+- Filesystem, networking (including sockets, TLS), concurrency controls, database access, and cryptography primitives are now spelled out (`STANDARD_LIBRARY.md:10-58`).
 
-- **Filesystem primitives** — `STANDARD_LIBRARY.md` covers `read_file`/`write_file` but omits directory traversal, permissions, streaming APIs needed for serious cross-platform tooling.
-- **Networking depth** — Only `http.get/post` are sketched; no sockets, WebSockets, TLS controls, or async IO story, limiting portability and performance for network-heavy apps.
-- **Database access** — No mention of DB connectors or a generic data access layer, making “cross compilable” claims thin for enterprise use.
-- **Cryptography** — Absent primitives for hashing, signing, or encryption, yet a “secure by default” language needs them in the standard surface.
-- **Concurrency runtime** — While channels/tasks exist in the grammar, there’s no standard lib guidance on scheduling, backpressure, or task cancellation, which complicates efficient backends.
-
-Use these categorized findings to triage grammar fixes, runtime semantics, and standard library expansion before pursuing cross-platform, performant implementations.
+_Status: 0 open P0 issues. Continue regression-testing future edits against these resolved cases._

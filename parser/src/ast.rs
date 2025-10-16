@@ -19,5 +19,62 @@ pub struct Import {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Item {
+    Record(RecordDecl),
+    Task(TaskDecl),
+    Workflow(WorkflowDecl),
+    Test(TestDecl),
+    Other(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecordDecl {
+    pub name: Ident,
+    pub type_params: Vec<Ident>,
+    pub fields: Vec<RecordField>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecordField {
+    pub name: Ident,
+    pub optional: bool,
+    pub ty: TypeExpr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskDecl {
+    pub name: Ident,
+    pub params: Vec<Param>,
+    pub return_type: Option<TypeExpr>,
+    pub body: Block,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkflowDecl {
+    pub name: Ident,
+    pub body: Block,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TestDecl {
+    pub name: String,
+    pub body: Block,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Param {
+    pub name: Ident,
+    pub ty: TypeExpr,
+    pub default: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Block {
+    pub raw: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TypeExpr {
+    Simple(QualifiedName),
+    Optional(Box<TypeExpr>),
     Unknown(String),
 }

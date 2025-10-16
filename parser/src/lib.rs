@@ -103,9 +103,10 @@ mod tests {
             "expected placeholder items captured from remainder"
         );
         match &module.items[0] {
-            ast::Item::Unknown(body) => {
+            ast::Item::Other(body) => {
                 assert!(body.contains("ProduceBrief"), "expected task body captured");
             }
+            other => panic!("unexpected first item: {:?}", other),
         }
     }
 }

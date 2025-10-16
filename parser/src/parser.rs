@@ -77,7 +77,7 @@ fn items_parser() -> impl Parser<char, Vec<ast::Item>, Error = Simple<char>> {
         if trimmed.is_empty() {
             Vec::new()
         } else {
-            vec![ast::Item::Unknown(trimmed.to_string())]
+            vec![ast::Item::Other(trimmed.to_string())]
         }
     })
 }

@@ -98,15 +98,33 @@ mod tests {
         );
         assert_eq!(text_import.alias.as_deref(), Some("T"));
 
-        assert!(
-            !module.items.is_empty(),
-            "expected placeholder items captured from remainder"
-        );
+        assert_eq!(module.items.len(), 3);
+
         match &module.items[0] {
-            ast::Item::Other(body) => {
-                assert!(body.contains("ProduceBrief"), "expected task body captured");
+            ast::Item::Record(record) => {
+                assert_eq!(record.name, "Brief");
+                assert_eq!(record.fields.len(), 3);
+                assert_eq!(record.fields[0].name, "title");
             }
-            other => panic!("unexpected first item: {:?}", other),
+            other => panic!("expected record, got {:?}", other),
+        }
+
+        match &module.items[1] {
+            ast::Item::Task(task) => {
+                assert_eq!(task.name, "ProduceBrief");
+                assert_eq!(task.params.len(), 1);
+                assert_eq!(task.params[0].name, "topic");
+                assert!(task.body.raw.contains("Writer.run"));
+            }
+            other => panic!("expected task, got {:?}", other),
+        }
+
+        match &module.items[2] {
+            ast::Item::Workflow(flow) => {
+                assert_eq!(flow.name, "Main");
+                assert!(flow.body.raw.contains("start"));
+            }
+            other => panic!("expected workflow, got {:?}", other),
         }
     }
 }

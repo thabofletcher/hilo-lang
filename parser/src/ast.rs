@@ -19,5 +19,5 @@ pub struct Import {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Item {
-    Placeholder,
+    Unknown(String),
 }

@@ -17,36 +17,41 @@ pub fn parse_module(source: &str) -> Result<ast::Module, HiloParseError> {
 }
 
 fn module_parser() -> impl Parser<char, ast::Module, Error = Simple<char>> {
-    module_decl()
-        .then(import_parser().repeated())
-        .map(|(name, imports)| ast::Module {
-            name,
-            imports,
-            items: Vec::new(),
-        })
-        .then_ignore(end())
+    ws().ignore_then(
+        module_decl()
+            .then(import_parser().repeated())
+            .then(items_parser())
+            .map(|((name, imports), items)| ast::Module {
+                name,
+                imports,
+                items,
+            }),
+    )
+    .then_ignore(ws())
+    .then_ignore(end())
 }
 
 fn module_decl() -> impl Parser<char, Option<ast::QualifiedName>, Error = Simple<char>> {
     text::keyword("module")
-        .padded()
-        .ignore_then(qualified_name().padded())
+        .then_ignore(ws())
+        .ignore_then(qualified_name())
+        .then_ignore(ws())
         .map(Some)
         .or_not()
         .map(|opt| opt.flatten())
 }
 
 fn import_parser() -> impl Parser<char, ast::Import, Error = Simple<char>> {
-    text::keyword("import")
-        .padded()
-        .ignore_then(qualified_name().padded())
+    ws().ignore_then(text::keyword("import"))
+        .then_ignore(ws())
+        .ignore_then(qualified_name())
+        .then_ignore(ws())
         .then(import_tail())
         .map(|(path, (alias, members))| ast::Import {
             path,
             members,
             alias,
         })
-        .padded()
 }
 
 fn import_tail() -> impl Parser<char, (Option<String>, Option<Vec<String>>), Error = Simple<char>> {
@@ -66,8 +71,23 @@ fn import_tail() -> impl Parser<char, (Option<String>, Option<Vec<String>>), Err
         .map(|opt| opt.unwrap_or((None, None)))
 }
 
+fn items_parser() -> impl Parser<char, Vec<ast::Item>, Error = Simple<char>> {
+    any().repeated().collect::<String>().map(|rest| {
+        let trimmed = rest.trim();
+        if trimmed.is_empty() {
+            Vec::new()
+        } else {
+            vec![ast::Item::Unknown(trimmed.to_string())]
+        }
+    })
+}
+
 fn qualified_name() -> impl Parser<char, ast::QualifiedName, Error = Simple<char>> {
-    identifier().separated_by(just('.')).at_least(1).collect()
+    identifier()
+        .then_ignore(ws())
+        .separated_by(just('.').then_ignore(ws()))
+        .at_least(1)
+        .collect()
 }
 
 fn identifier() -> impl Parser<char, String, Error = Simple<char>> {
@@ -75,20 +95,44 @@ fn identifier() -> impl Parser<char, String, Error = Simple<char>> {
 }
 
 fn alias_parser() -> impl Parser<char, String, Error = Simple<char>> {
-    text::keyword("as")
-        .padded()
-        .ignore_then(identifier().padded())
+    ws().ignore_then(text::keyword("as"))
+        .then_ignore(ws())
+        .ignore_then(identifier())
+        .then_ignore(ws())
 }
 
 fn member_list_parser() -> impl Parser<char, Vec<String>, Error = Simple<char>> {
-    just('{')
-        .padded()
+    ws().ignore_then(just('{'))
+        .then_ignore(ws())
         .ignore_then(
             identifier()
-                .padded()
-                .separated_by(just(',').padded())
+                .then_ignore(ws())
+                .separated_by(just(',').then_ignore(ws()))
                 .allow_trailing()
                 .collect::<Vec<_>>(),
         )
-        .then_ignore(just('}').padded())
+        .then_ignore(ws())
+        .then_ignore(just('}'))
+        .then_ignore(ws())
+}
+
+fn ws() -> impl Parser<char, (), Error = Simple<char>> {
+    let spaces = filter(|c: &char| c.is_whitespace())
+        .repeated()
+        .at_least(1)
+        .ignored();
+
+    let line_comment = just("//")
+        .ignore_then(filter(|c: &char| *c != '\n').repeated().ignored())
+        .then_ignore(just('\n').ignored().or(end()))
+        .ignored();
+
+    let block_comment = just("/*")
+        .ignore_then(take_until(just("*/")).ignored())
+        .then_ignore(just("*/"))
+        .ignored();
+
+    choice((spaces, line_comment, block_comment))
+        .repeated()
+        .ignored()
 }

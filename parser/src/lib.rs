@@ -70,4 +70,42 @@ mod tests {
         );
         assert_eq!(import.alias.as_deref(), Some("txt"));
     }
+
+    #[test]
+    fn parses_sample_project_main() {
+        let src = include_str!("../../project/src/main.hilo");
+        let module = parse_module(src).expect("parser should succeed on sample project");
+
+        assert_eq!(
+            module.name,
+            Some(vec![
+                String::from("org"),
+                String::from("example"),
+                String::from("hilo"),
+                String::from("project")
+            ])
+        );
+
+        assert_eq!(module.imports.len(), 5);
+        let text_import = &module.imports[1];
+        assert_eq!(
+            text_import.path,
+            vec![String::from("core"), String::from("text")]
+        );
+        assert_eq!(
+            text_import.members.as_ref().unwrap(),
+            &vec![String::from("trim"), String::from("join")]
+        );
+        assert_eq!(text_import.alias.as_deref(), Some("T"));
+
+        assert!(
+            !module.items.is_empty(),
+            "expected placeholder items captured from remainder"
+        );
+        match &module.items[0] {
+            ast::Item::Unknown(body) => {
+                assert!(body.contains("ProduceBrief"), "expected task body captured");
+            }
+        }
+    }
 }

@@ -342,11 +342,11 @@ fn parse_statement(line: &str) -> ast::Statement {
             value: if value.is_empty() {
                 None
             } else {
-                Some(value.to_string())
+                Some(parse_expression(value))
             },
         };
     }
-    ast::Statement::Expr(line.to_string())
+    ast::Statement::Expr(parse_expression(line))
 }
 
 fn parse_let_statement(rest: &str) -> ast::Statement {
@@ -369,8 +369,150 @@ fn parse_let_statement(rest: &str) -> ast::Statement {
     ast::Statement::Let {
         name,
         ty,
-        value: value_part,
+        value: value_part.map(|v| parse_expression(&v)),
     }
+}
+
+fn parse_expression(src: &str) -> ast::Expression {
+    let trimmed = src.trim();
+    if trimmed.is_empty() {
+        return ast::Expression::Raw(String::new());
+    }
+    if let Some((target, args)) = parse_call_expression(trimmed) {
+        return ast::Expression::Call {
+            target: Box::new(parse_expression(target)),
+            args: args.into_iter().map(parse_expression).collect(),
+        };
+    }
+    if let Some((left, op, right)) = parse_binary_expression(trimmed) {
+        return ast::Expression::Binary {
+            left: Box::new(parse_expression(left)),
+            op: op.to_string(),
+            right: Box::new(parse_expression(right)),
+        };
+    }
+    if let Some((target, property)) = parse_member_expression(trimmed) {
+        return ast::Expression::Member {
+            target: Box::new(parse_expression(target)),
+            property: property.to_string(),
+        };
+    }
+    if is_identifier(trimmed) {
+        return ast::Expression::Identifier(trimmed.to_string());
+    }
+    if is_literal(trimmed) {
+        return ast::Expression::Literal(trimmed.to_string());
+    }
+    ast::Expression::Raw(trimmed.to_string())
+}
+
+fn parse_call_expression(src: &str) -> Option<(&str, Vec<&str>)> {
+    let open_paren = src.find('(')?;
+    let close_paren = src.rfind(')')?;
+    if close_paren < open_paren {
+        return None;
+    }
+    let target = src[..open_paren].trim();
+    if target.is_empty() {
+        return None;
+    }
+    let args_str = &src[open_paren + 1..close_paren];
+    let args = split_args(args_str);
+    Some((target, args))
+}
+
+fn split_args(src: &str) -> Vec<&str> {
+    let mut args = Vec::new();
+    let mut depth = 0;
+    let mut start = 0;
+    let chars: Vec<char> = src.chars().collect();
+    for (idx, ch) in chars.iter().enumerate() {
+        match ch {
+            '(' | '{' | '[' => depth += 1,
+            ')' | '}' | ']' => {
+                if depth > 0 {
+                    depth -= 1
+                }
+            }
+            ',' if depth == 0 => {
+                args.push(src[start..idx].trim());
+                start = idx + 1;
+            }
+            _ => {}
+        }
+    }
+    let tail = src[start..].trim();
+    if !tail.is_empty() {
+        args.push(tail);
+    }
+    args
+}
+
+fn parse_member_expression(src: &str) -> Option<(&str, &str)> {
+    let mut depth = 0;
+    let chars: Vec<char> = src.chars().collect();
+    for (idx, ch) in chars.iter().enumerate().rev() {
+        match ch {
+            ')' | ']' | '}' => depth += 1,
+            '(' | '[' | '{' => depth -= 1,
+            '.' if depth == 0 => {
+                let target = src[..idx].trim();
+                let property = src[idx + 1..].trim();
+                if !target.is_empty() && is_identifier(property) {
+                    return Some((target, property));
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn parse_binary_expression(src: &str) -> Option<(&str, &str, &str)> {
+    let ops = [
+        "==", "!=", "<=", ">=", "&&", "||", "+", "-", "*", "/", "%", "<", ">",
+    ];
+    let mut depth = 0;
+    let chars: Vec<char> = src.chars().collect();
+    for idx in (0..chars.len()).rev() {
+        let ch = chars[idx];
+        match ch {
+            ')' | ']' | '}' => depth += 1,
+            '(' | '[' | '{' => depth -= 1,
+            _ if depth == 0 => {
+                for op in ops.iter() {
+                    if idx + 1 >= op.len() {
+                        let candidate = &src[idx + 1 - op.len()..=idx];
+                        if candidate == *op {
+                            let left = src[..idx + 1 - op.len()].trim();
+                            let right = src[idx + 1..].trim();
+                            if !left.is_empty() && !right.is_empty() {
+                                return Some((left, *op, right));
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn is_identifier(s: &str) -> bool {
+    let mut chars = s.chars();
+    match chars.next() {
+        Some(ch) if ch == '_' || ch.is_alphabetic() => {
+            chars.all(|c| c == '_' || c.is_alphanumeric())
+        }
+        _ => false,
+    }
+}
+
+fn is_literal(s: &str) -> bool {
+    s.starts_with('"') && s.ends_with('"')
+        || s.parse::<f64>().is_ok()
+        || matches!(s, "true" | "false")
 }
 
 fn parse_record_fields(body: &str) -> Vec<ast::RecordField> {

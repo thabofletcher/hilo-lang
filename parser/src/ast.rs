@@ -78,12 +78,32 @@ pub enum Statement {
     Let {
         name: Ident,
         ty: Option<TypeExpr>,
-        value: Option<String>,
+        value: Option<Expression>,
     },
     Return {
-        value: Option<String>,
+        value: Option<Expression>,
     },
-    Expr(String),
+    Expr(Expression),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Expression {
+    Identifier(Ident),
+    Literal(String),
+    Call {
+        target: Box<Expression>,
+        args: Vec<Expression>,
+    },
+    Member {
+        target: Box<Expression>,
+        property: Ident,
+    },
+    Binary {
+        left: Box<Expression>,
+        op: String,
+        right: Box<Expression>,
+    },
+    Raw(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

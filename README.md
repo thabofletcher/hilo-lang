@@ -1,4 +1,4 @@
-# HILO — Human-Integrated Language for Orchestration (v1.0)
+# HILO — Human-Integrated Language for Orchestration
 
 **HILO** is a compact, human-first *pseudocode* language that is easy for people to read and for AI/agents to parse.
 It blends **modular**, **functional**, and **object-oriented** styles while adding **agent** and **workflow** primitives,

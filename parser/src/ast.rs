@@ -98,6 +98,15 @@ pub enum Expression {
         target: Box<Expression>,
         property: Ident,
     },
+    Index {
+        target: Box<Expression>,
+        index: Box<Expression>,
+    },
+    OptionalChain {
+        target: Box<Expression>,
+        property: Ident,
+    },
+    StructLiteral(Vec<(Ident, Expression)>),
     Binary {
         left: Box<Expression>,
         op: String,

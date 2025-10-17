@@ -378,6 +378,19 @@ fn parse_expression(src: &str) -> ast::Expression {
     if trimmed.is_empty() {
         return ast::Expression::Raw(String::new());
     }
+    if let Some((target, args)) = parse_struct_literal(trimmed) {
+        return ast::Expression::StructLiteral(
+            args.into_iter()
+                .map(|(name, expr)| (name.to_string(), parse_expression(expr)))
+                .collect(),
+        );
+    }
+    if let Some((target, args)) = parse_index_expression(trimmed) {
+        return ast::Expression::Index {
+            target: Box::new(parse_expression(target)),
+            index: Box::new(parse_expression(args)),
+        };
+    }
     if let Some((target, args)) = parse_call_expression(trimmed) {
         return ast::Expression::Call {
             target: Box::new(parse_expression(target)),
@@ -393,6 +406,12 @@ fn parse_expression(src: &str) -> ast::Expression {
     }
     if let Some((target, property)) = parse_member_expression(trimmed) {
         return ast::Expression::Member {
+            target: Box::new(parse_expression(target)),
+            property: property.to_string(),
+        };
+    }
+    if let Some((target, property)) = parse_optional_chain(trimmed) {
+        return ast::Expression::OptionalChain {
             target: Box::new(parse_expression(target)),
             property: property.to_string(),
         };
@@ -419,6 +438,52 @@ fn parse_call_expression(src: &str) -> Option<(&str, Vec<&str>)> {
     let args_str = &src[open_paren + 1..close_paren];
     let args = split_args(args_str);
     Some((target, args))
+}
+
+fn parse_struct_literal(src: &str) -> Option<(&str, Vec<(&str, &str)>)> {
+    if !src.contains('{') || !src.ends_with('}') {
+        return None;
+    }
+    let open_brace = src.find('{')?;
+    let target = src[..open_brace].trim();
+    if target.is_empty() {
+        return None;
+    }
+    let body = &src[open_brace + 1..src.len() - 1];
+    let entries = split_args(body)
+        .into_iter()
+        .filter_map(|entry| entry.split_once(':'))
+        .map(|(name, expr)| (name.trim(), expr.trim()))
+        .collect::<Vec<_>>();
+    if entries.is_empty() {
+        return None;
+    }
+    Some((target, entries))
+}
+
+fn parse_index_expression(src: &str) -> Option<(&str, &str)> {
+    if !src.ends_with(']') {
+        return None;
+    }
+    let mut depth = 0;
+    let chars: Vec<char> = src.chars().collect();
+    for (idx, ch) in chars.iter().enumerate().rev() {
+        match ch {
+            ']' => depth += 1,
+            '[' => {
+                depth -= 1;
+                if depth == 0 {
+                    let target = src[..idx].trim();
+                    let index = src[idx + 1..src.len() - 1].trim();
+                    if !target.is_empty() && !index.is_empty() {
+                        return Some((target, index));
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 fn split_args(src: &str) -> Vec<&str> {
@@ -458,6 +523,26 @@ fn parse_member_expression(src: &str) -> Option<(&str, &str)> {
             '.' if depth == 0 => {
                 let target = src[..idx].trim();
                 let property = src[idx + 1..].trim();
+                if !target.is_empty() && is_identifier(property) {
+                    return Some((target, property));
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn parse_optional_chain(src: &str) -> Option<(&str, &str)> {
+    let mut depth = 0;
+    let chars: Vec<char> = src.chars().collect();
+    for idx in (0..chars.len()).rev() {
+        match chars[idx] {
+            ')' | ']' | '}' => depth += 1,
+            '(' | '[' | '{' => depth -= 1,
+            '?' if depth == 0 && idx + 1 < chars.len() && chars[idx + 1] == '.' => {
+                let target = src[..idx].trim();
+                let property = src[idx + 2..].trim();
                 if !target.is_empty() && is_identifier(property) {
                     return Some((target, property));
                 }

@@ -1,0 +1,1 @@
+You have been instructed to operate according to rules defined in .hilo scripts. Read hilo/spec/GRAMMAR.md and hilo/spec/LANGUAGE_SPEC.md, then operate on the entry point you were give. If you were not given an entry point, look for AGENTS.hilo and operate from that as your entry point.

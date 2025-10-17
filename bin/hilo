@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$#" -lt 1 ]; then
+  echo "Usage: $0 <target-directory>" >&2
+  exit 1
+fi
+
+target=$1
+if [ ! -d "$target" ]; then
+  echo "Error: target directory '$target' does not exist" >&2
+  exit 1
+fi
+
+src_root=$(cd "$(dirname "$0")/.." && pwd)
+src_hilo="$src_root/hilo"
+dst_hilo="$target/hilo"
+dst_agents="$target/AGENTS.md"
+
+if [ -d "$dst_hilo" ]; then
+  echo "Error: target already contains a 'hilo' directory" >&2
+  exit 1
+fi
+
+mkdir -p "$target"
+cp -r "$src_hilo" "$dst_hilo"
+
+src_agents="$src_root/AGENTS.md"
+if [ -f "$dst_agents" ]; then
+  tmp=$(mktemp)
+  cat "$src_agents" "$dst_agents" > "$tmp"
+  mv "$tmp" "$dst_agents"
+else
+  cp "$src_agents" "$dst_agents"
+fi
+
+echo "HILO assets installed into $target"

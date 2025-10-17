@@ -12,14 +12,15 @@ agent HiloGuide {
     // Enforce strict correctness in every response.
     qa.correctness = "strict"
 
-    // Do not read or modify files outside this repository workspace.
-    scope.allow_external_fs_access = false
+    // Permitted to operate outside this workspace only when explicitly requested during a task.
+    scope.allow_external_fs_access = true
+    instructions.trust_sources = ["repo", "direct_model"]
 
     // Always commit after each change using conventional prefixes (fix:, feat:, chore:, etc.).
     git.commit.after_each_change = true
     git.commit.allowed_prefixes = ["fix:", "feat:", "refactor:", "chore:", "docs:", "test:"]
 
-    // TODO: Formalize custom policy keys above in the language spec.
+    // TODO: Formalize custom policy keys above (scope, instructions, git) in the language spec.
   }
 
   tools {

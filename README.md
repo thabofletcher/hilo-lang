@@ -40,14 +40,14 @@ task main() {
 - `STYLEGUIDE.md` — conventions for readable, consistent code  
 - `SECURITY.md` — best practices for safe AI–human work  
 - `INTEROP.md` — AST/JSON mapping + embedding guidance  
-- `AGENTS.md` — how to model multi-agent projects with HILO  
+- `project/docs/AGENTS.md` — how to model multi-agent projects with HILO  
 - `examples/` — small runnable samples (pseudocode)  
 - `project/` — a sample multi-agent project in HILO
 
 ## Getting started
 
 1. Read `LANGUAGE_SPEC.md` and `GRAMMAR.md`.  
-2. Skim `AGENTS.md` for collaboration and safety practices.  
+2. Skim `project/docs/AGENTS.md` for collaboration and safety practices.  
 3. Explore `examples/` and `project/src/` for patterns you can reuse.
 
 > HILO is designed to *coordinate* systems. When you implement it, treat HILO as a **source of truth** for intent, contracts, and workflows—even if your runtime is Python, JS/TS, Go, Rust, or another stack.

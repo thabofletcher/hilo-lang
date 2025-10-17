@@ -39,4 +39,4 @@ policy {
 - Mark internal notes with `@internal` attributes or place within `policy { private.notes = true }`.
 - Output should be **safe-to-share** unless explicitly stated otherwise.
 
-These norms are encoded into the language shape (see `LANGUAGE_SPEC.md` and `AGENTS.md`).
+These norms are encoded into the language shape (see `LANGUAGE_SPEC.md` and `project/docs/AGENTS.md`).

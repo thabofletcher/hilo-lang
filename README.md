@@ -1,10 +1,8 @@
-# HILO — Human-Integrated Language for Orchestration
+# HILO — Agentic DSL for GPTs, AIs, and Operational Tooling (v1.0)
 
-**HILO** is a compact, human-first *pseudocode* language that is easy for people to read and for AI/agents to parse.
-It blends **modular**, **functional**, and **object-oriented** styles while adding **agent** and **workflow** primitives,
-and a clear **policy** model for safe AI–human collaboration.
+**HILO** is a compact, agent-focused DSL crafted so GPT-class models, automation AIs, and operational tooling can parse, reason about, and coordinate complex workflows. It stays human-readable while foregrounding agent roles, policies, tools, and orchestration primitives—turning `.hilo` files into executable playbooks for autonomous systems.
 
-> Status: Draft v1.0 • 2025-10-15
+> Status: Draft v1.0 • 2025-10-17
 
 ## Why HILO?
 
@@ -15,7 +13,7 @@ and a clear **policy** model for safe AI–human collaboration.
 - **Safety & governance** built in: `policy` blocks, explicit tool declarations, and redaction hints.
 - **Parse-friendly**: reserved keywords and EBNF are provided; tokens avoid ambiguity.
 
-HILO is **not** a runtime. It is a *design/coordination language* for projects that involve people and AI systems.
+HILO is **not** a runtime. It is the coordination DSL that glues GPTs, AIs, and software tooling together—codifying how they collaborate safely and correctly.
 
 ## Quick look
 

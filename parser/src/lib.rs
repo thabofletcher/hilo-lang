@@ -131,8 +131,27 @@ mod tests {
                 assert_eq!(task.params[0].name, "topic");
                 assert!(task.body.raw.contains("Writer.run"));
                 match task.body.statements.get(0) {
-                    Some(ast::Statement::Let { name, .. }) => {
+                    Some(ast::Statement::Let { name, value, .. }) => {
                         assert_eq!(name, "research");
+                        let value_expr = value.as_ref().expect("let should have expression");
+                        match value_expr {
+                            ast::Expression::Call { target, args } => {
+                                match target.as_ref() {
+                                    ast::Expression::Member { target, property } => {
+                                        assert_eq!(property, "run");
+                                        assert!(
+                                            matches!(target.as_ref(), ast::Expression::Identifier(id) if id == "Researcher")
+                                        );
+                                    }
+                                    other => panic!("expected member call target, got {:?}", other),
+                                }
+                                assert_eq!(args.len(), 1);
+                                assert!(
+                                    matches!(args[0], ast::Expression::Identifier(ref id) if id == "topic")
+                                );
+                            }
+                            other => panic!("expected call expression, got {:?}", other),
+                        }
                     }
                     other => panic!("expected let statement, got {:?}", other),
                 }
@@ -154,6 +173,41 @@ mod tests {
                 assert!(!flow.body.statements.is_empty());
             }
             other => panic!("expected workflow, got {:?}", other),
+        }
+
+        let return_expr = module
+            .items
+            .iter()
+            .find_map(|item| match item {
+                ast::Item::Task(task) => task.body.statements.iter().find_map(|stmt| match stmt {
+                    ast::Statement::Return { value: Some(expr) } => Some(expr.clone()),
+                    _ => None,
+                }),
+                _ => None,
+            })
+            .expect("expected return expression");
+
+        match return_expr {
+            ast::Expression::StructLiteral { type_name, fields } => {
+                assert_eq!(type_name, vec![String::from("Brief")]);
+                let sources_expr = fields
+                    .iter()
+                    .find(|(name, _)| name == "sources")
+                    .map(|(_, expr)| expr)
+                    .expect("expected sources field");
+                match sources_expr {
+                    ast::Expression::Index { target, index } => {
+                        assert!(
+                            matches!(target.as_ref(), ast::Expression::Identifier(id) if id == "data")
+                        );
+                        assert!(
+                            matches!(index.as_ref(), ast::Expression::Literal(lit) if lit == "\"sources\"")
+                        );
+                    }
+                    other => panic!("expected index expression, got {:?}", other),
+                }
+            }
+            other => panic!("expected struct literal return, got {:?}", other),
         }
     }
 
@@ -205,6 +259,45 @@ mod tests {
                 assert!(fields[1].optional);
             }
             other => panic!("expected struct type, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parses_optional_and_index_expressions() {
+        let src = r#"
+            task Demo() {
+              let items = response?.data["items"]
+              return items
+            }
+        "#;
+
+        let module = parse_module(src).expect("parser should succeed on optional/index sample");
+        let task = match &module.items[0] {
+            ast::Item::Task(task) => task,
+            other => panic!("expected task, got {:?}", other),
+        };
+
+        match task.body.statements.get(0) {
+            Some(ast::Statement::Let {
+                value: Some(expr), ..
+            }) => match expr {
+                ast::Expression::Index { target, index } => {
+                    match target.as_ref() {
+                        ast::Expression::OptionalChain { target, property } => {
+                            assert_eq!(property, "data");
+                            assert!(
+                                matches!(target.as_ref(), ast::Expression::Identifier(id) if id == "response")
+                            );
+                        }
+                        other => panic!("expected optional chain target, got {:?}", other),
+                    }
+                    assert!(
+                        matches!(index.as_ref(), ast::Expression::Literal(lit) if lit == "\"items\"")
+                    );
+                }
+                other => panic!("expected index expression, got {:?}", other),
+            },
+            other => panic!("expected let statement, got {:?}", other),
         }
     }
 }

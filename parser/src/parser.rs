@@ -322,14 +322,96 @@ fn parse_test_decl(src: &str, start: usize) -> Option<(ast::Item, usize)> {
 
 fn build_block(body_src: &str) -> ast::Block {
     let raw = body_src.trim().to_string();
-    let statements = raw
-        .lines()
-        .map(|line| line.trim())
-        .filter(|line| !line.is_empty())
-        .filter(|line| *line != "{" && *line != "}" && *line != "}" && *line != "{")
-        .map(parse_statement)
-        .collect();
+    let mut statements = Vec::new();
+    let mut buffer = String::new();
+    let mut brace_balance: i32 = 0;
+
+    for raw_line in body_src.lines() {
+        let trimmed = raw_line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        if buffer.is_empty() {
+            if trimmed.starts_with("return") {
+                let (brace_delta, _, _) = nesting_deltas(trimmed);
+                if brace_delta > 0 && !trimmed.contains('}') {
+                    buffer.push_str(trimmed);
+                    brace_balance = brace_delta;
+                    continue;
+                }
+                statements.push(parse_statement(trimmed));
+                continue;
+            }
+
+            if trimmed.starts_with("let ") {
+                let (brace_delta, _, _) = nesting_deltas(trimmed);
+                if brace_delta > 0 && !trimmed.contains('}') {
+                    buffer.push_str(trimmed);
+                    brace_balance = brace_delta;
+                    continue;
+                }
+                statements.push(parse_statement(trimmed));
+                continue;
+            }
+
+            if trimmed == "{" || trimmed == "}" {
+                continue;
+            }
+
+            statements.push(parse_statement(trimmed));
+            continue;
+        }
+
+        buffer.push(' ');
+        buffer.push_str(trimmed);
+        let (brace_delta, _, _) = nesting_deltas(trimmed);
+        brace_balance += brace_delta;
+        if brace_balance <= 0 {
+            statements.push(parse_statement(&buffer));
+            buffer.clear();
+            brace_balance = 0;
+        }
+    }
+
+    if !buffer.trim().is_empty() {
+        statements.push(parse_statement(&buffer));
+    }
+
     ast::Block { raw, statements }
+}
+
+fn nesting_deltas(line: &str) -> (i32, i32, i32) {
+    let mut brace = 0;
+    let mut bracket = 0;
+    let mut paren = 0;
+    let mut in_string = false;
+    let mut escape = false;
+    for ch in line.chars() {
+        if in_string {
+            if escape {
+                escape = false;
+                continue;
+            }
+            match ch {
+                '\\' => escape = true,
+                '"' => in_string = false,
+                _ => {}
+            }
+            continue;
+        }
+        match ch {
+            '"' => in_string = true,
+            '{' => brace += 1,
+            '}' => brace -= 1,
+            '[' => bracket += 1,
+            ']' => bracket -= 1,
+            '(' => paren += 1,
+            ')' => paren -= 1,
+            _ => {}
+        }
+    }
+    (brace, bracket, paren)
 }
 
 fn parse_statement(line: &str) -> ast::Statement {
@@ -378,12 +460,14 @@ fn parse_expression(src: &str) -> ast::Expression {
     if trimmed.is_empty() {
         return ast::Expression::Raw(String::new());
     }
-    if let Some((target, args)) = parse_struct_literal(trimmed) {
-        return ast::Expression::StructLiteral(
-            args.into_iter()
+    if let Some((type_name, fields)) = parse_struct_literal(trimmed) {
+        return ast::Expression::StructLiteral {
+            type_name,
+            fields: fields
+                .into_iter()
                 .map(|(name, expr)| (name.to_string(), parse_expression(expr)))
                 .collect(),
-        );
+        };
     }
     if let Some((target, args)) = parse_index_expression(trimmed) {
         return ast::Expression::Index {
@@ -404,14 +488,14 @@ fn parse_expression(src: &str) -> ast::Expression {
             right: Box::new(parse_expression(right)),
         };
     }
-    if let Some((target, property)) = parse_member_expression(trimmed) {
-        return ast::Expression::Member {
+    if let Some((target, property)) = parse_optional_chain(trimmed) {
+        return ast::Expression::OptionalChain {
             target: Box::new(parse_expression(target)),
             property: property.to_string(),
         };
     }
-    if let Some((target, property)) = parse_optional_chain(trimmed) {
-        return ast::Expression::OptionalChain {
+    if let Some((target, property)) = parse_member_expression(trimmed) {
+        return ast::Expression::Member {
             target: Box::new(parse_expression(target)),
             property: property.to_string(),
         };
@@ -440,13 +524,21 @@ fn parse_call_expression(src: &str) -> Option<(&str, Vec<&str>)> {
     Some((target, args))
 }
 
-fn parse_struct_literal(src: &str) -> Option<(&str, Vec<(&str, &str)>)> {
+fn parse_struct_literal(src: &str) -> Option<(Vec<String>, Vec<(&str, &str)>)> {
     if !src.contains('{') || !src.ends_with('}') {
         return None;
     }
     let open_brace = src.find('{')?;
     let target = src[..open_brace].trim();
     if target.is_empty() {
+        return None;
+    }
+    let type_name: Vec<String> = target
+        .split('.')
+        .map(|part| part.trim().to_string())
+        .filter(|part| !part.is_empty())
+        .collect();
+    if type_name.is_empty() {
         return None;
     }
     let body = &src[open_brace + 1..src.len() - 1];
@@ -458,7 +550,7 @@ fn parse_struct_literal(src: &str) -> Option<(&str, Vec<(&str, &str)>)> {
     if entries.is_empty() {
         return None;
     }
-    Some((target, entries))
+    Some((type_name, entries))
 }
 
 fn parse_index_expression(src: &str) -> Option<(&str, &str)> {

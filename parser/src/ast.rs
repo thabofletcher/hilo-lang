@@ -106,7 +106,10 @@ pub enum Expression {
         target: Box<Expression>,
         property: Ident,
     },
-    StructLiteral(Vec<(Ident, Expression)>),
+    StructLiteral {
+        type_name: QualifiedName,
+        fields: Vec<(Ident, Expression)>,
+    },
     Binary {
         left: Box<Expression>,
         op: String,

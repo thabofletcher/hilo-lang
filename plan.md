@@ -7,7 +7,7 @@
 - [ ] Write token definitions & lexer (if toolkit requires manual lexing).
 
 ## Milestone 2 — AST & Parsing
-- [ ] Design Rust AST structs/enums mirroring `LANGUAGE_SPEC.md`.
+- [ ] Design Rust AST structs/enums mirroring `hilo/spec/LANGUAGE_SPEC.md`.
 - [ ] Implement parser for core declarations (modules, imports, records, enums, funcs).
 - [ ] Add agents/tasks/workflows parsing, including policy and tools blocks.
 - [ ] Cover expressions/statements: precedence, pipelines, async/await, struct literals.

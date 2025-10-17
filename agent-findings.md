@@ -16,11 +16,11 @@ This log tracks QA findings for the HILO surface area. Items move to “Resolved
 - `async func` is supported in function signatures and decls (`GRAMMAR.md:40-45`).
 - Optional field/type suffix `?` is part of the grammar (`GRAMMAR.md:20-23`, `GRAMMAR.md:141-149`).
 - `Literal` is defined and usable in pattern matching (`GRAMMAR.md:153-154`).
-- Boolean precedence is documented in the spec (`LANGUAGE_SPEC.md:103`).
+- Boolean precedence is documented in the spec (`hilo/spec/LANGUAGE_SPEC.md:103`).
 
 ## Open Performance / Semantic Questions
 
-- None outstanding after clarifying pipeline borrowing semantics and map typing (`LANGUAGE_SPEC.md:97-122`).
+- None outstanding after clarifying pipeline borrowing semantics and map typing (`hilo/spec/LANGUAGE_SPEC.md:97-122`).
 
 ## Standard Library Coverage
 

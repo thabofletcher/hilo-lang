@@ -34,19 +34,19 @@ task main() {
 
 ## Repo layout (this zip)
 
-- `LANGUAGE_SPEC.md` — complete language semantics and constructs  
-- `GRAMMAR.md` — EBNF grammar suitable for writing a parser  
-- `STANDARD_LIBRARY.md` — the conceptual stdlib surface for examples  
-- `STYLEGUIDE.md` — conventions for readable, consistent code  
-- `SECURITY.md` — best practices for safe AI–human work  
-- `INTEROP.md` — AST/JSON mapping + embedding guidance  
+- `hilo/spec/LANGUAGE_SPEC.md` — complete language semantics and constructs  
+- `hilo/spec/GRAMMAR.md` — EBNF grammar suitable for writing a parser  
+- `hilo/spec/STANDARD_LIBRARY.md` — the conceptual stdlib surface for examples  
+- `hilo/spec/STYLEGUIDE.md` — conventions for readable, consistent code  
+- `hilo/spec/SECURITY.md` — best practices for safe AI–human work  
+- `hilo/spec/INTEROP.md` — AST/JSON mapping + embedding guidance  
 - `project/docs/AGENTS.md` — how to model multi-agent projects with HILO  
 - `examples/` — small runnable samples (pseudocode)  
 - `project/` — a sample multi-agent project in HILO
 
 ## Getting started
 
-1. Read `LANGUAGE_SPEC.md` and `GRAMMAR.md`.  
+1. Read `hilo/spec/LANGUAGE_SPEC.md` and `hilo/spec/GRAMMAR.md`.  
 2. Skim `project/docs/AGENTS.md` for collaboration and safety practices.  
 3. Explore `examples/` and `project/src/` for patterns you can reuse.
 

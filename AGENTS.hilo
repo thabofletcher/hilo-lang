@@ -22,5 +22,11 @@ agent HiloGuide {
     // TODO: Formalize custom policy keys above in the language spec.
   }
 
-  // TODO: Add explicit tooling declarations once the macro-level automation flow is defined.
+  tools {
+    // Allow the agent to perform controlled web searches when needed.
+    web.search(query: String, max_results: Int = 5) -> List[Result]
+    web.open(url: String) -> Page
+
+    // TODO: Define concrete `Result` and `Page` records in the standard library.
+  }
 }

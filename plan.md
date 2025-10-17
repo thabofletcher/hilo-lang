@@ -13,6 +13,7 @@
 - [ ] Cover expressions/statements: precedence, pipelines, async/await, struct literals.
 - [ ] Build property-based tests for tricky constructs (named args, optional types, lambdas).
 - [ ] Introduce a dedicated tokenizer to replace ad-hoc character scanning and feed the parser with typed tokens.
+- [ ] Expand agent DSL to support enriched tool contract declarations and usage patterns.
 
 ## Milestone 3 — Semantic Checks
 - [ ] Module-level symbol table & name resolution.

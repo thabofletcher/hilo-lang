@@ -326,9 +326,51 @@ fn build_block(body_src: &str) -> ast::Block {
         .lines()
         .map(|line| line.trim())
         .filter(|line| !line.is_empty())
-        .map(|line| ast::Statement::Raw(line.to_string()))
+        .filter(|line| *line != "{" && *line != "}" && *line != "}" && *line != "{")
+        .map(parse_statement)
         .collect();
     ast::Block { raw, statements }
+}
+
+fn parse_statement(line: &str) -> ast::Statement {
+    if let Some(rest) = line.strip_prefix("let ") {
+        return parse_let_statement(rest.trim());
+    }
+    if let Some(rest) = line.strip_prefix("return") {
+        let value = rest.trim();
+        return ast::Statement::Return {
+            value: if value.is_empty() {
+                None
+            } else {
+                Some(value.to_string())
+            },
+        };
+    }
+    ast::Statement::Expr(line.to_string())
+}
+
+fn parse_let_statement(rest: &str) -> ast::Statement {
+    let mut name_part = rest;
+    let mut value_part = None;
+    if let Some((lhs, rhs)) = rest.split_once('=') {
+        name_part = lhs.trim();
+        value_part = Some(rhs.trim().to_string());
+    }
+
+    let (name, ty) = if let Some((name, ty_str)) = name_part.split_once(':') {
+        (
+            name.trim().to_string(),
+            Some(parse_type_expr(ty_str.trim())),
+        )
+    } else {
+        (name_part.trim().to_string(), None)
+    };
+
+    ast::Statement::Let {
+        name,
+        ty,
+        value: value_part,
+    }
 }
 
 fn parse_record_fields(body: &str) -> Vec<ast::RecordField> {

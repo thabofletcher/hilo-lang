@@ -130,12 +130,19 @@ mod tests {
                 assert_eq!(task.params.len(), 1);
                 assert_eq!(task.params[0].name, "topic");
                 assert!(task.body.raw.contains("Writer.run"));
-                match &task.body.statements.get(0) {
-                    Some(ast::Statement::Raw(line)) => {
-                        assert!(line.starts_with("let research"));
+                match task.body.statements.get(0) {
+                    Some(ast::Statement::Let { name, .. }) => {
+                        assert_eq!(name, "research");
                     }
-                    other => panic!("expected first statement, got {:?}", other),
+                    other => panic!("expected let statement, got {:?}", other),
                 }
+                assert!(
+                    task.body
+                        .statements
+                        .iter()
+                        .any(|stmt| matches!(stmt, ast::Statement::Return { .. })),
+                    "expected a return statement in task body"
+                );
             }
             other => panic!("expected task, got {:?}", other),
         }

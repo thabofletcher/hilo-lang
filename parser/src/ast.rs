@@ -75,7 +75,15 @@ pub struct Block {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
-    Raw(String),
+    Let {
+        name: Ident,
+        ty: Option<TypeExpr>,
+        value: Option<String>,
+    },
+    Return {
+        value: Option<String>,
+    },
+    Expr(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

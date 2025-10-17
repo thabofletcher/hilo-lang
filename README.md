@@ -1,4 +1,4 @@
-# HILO — Agentic DSL for GPTs, AIs, and Operational Tooling (v1.0)
+# HILO — Agentic DSL for GPTs, AIs, and Operational Tooling
 
 **HILO** is a compact, agent-focused DSL crafted so GPT-class models, automation AIs, and operational tooling can parse, reason about, and coordinate complex workflows. It stays human-readable while foregrounding agent roles, policies, tools, and orchestration primitives—turning `.hilo` files into executable playbooks for autonomous systems.
 

@@ -12,6 +12,7 @@
 - [ ] Add agents/tasks/workflows parsing, including policy and tools blocks.
 - [ ] Cover expressions/statements: precedence, pipelines, async/await, struct literals.
 - [ ] Build property-based tests for tricky constructs (named args, optional types, lambdas).
+- [ ] Introduce a dedicated tokenizer to replace ad-hoc character scanning and feed the parser with typed tokens.
 
 ## Milestone 3 — Semantic Checks
 - [ ] Module-level symbol table & name resolution.

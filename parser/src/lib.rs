@@ -130,6 +130,12 @@ mod tests {
                 assert_eq!(task.params.len(), 1);
                 assert_eq!(task.params[0].name, "topic");
                 assert!(task.body.raw.contains("Writer.run"));
+                match &task.body.statements.get(0) {
+                    Some(ast::Statement::Raw(line)) => {
+                        assert!(line.starts_with("let research"));
+                    }
+                    other => panic!("expected first statement, got {:?}", other),
+                }
             }
             other => panic!("expected task, got {:?}", other),
         }
@@ -138,6 +144,7 @@ mod tests {
             ast::Item::Workflow(flow) => {
                 assert_eq!(flow.name, "Main");
                 assert!(flow.body.raw.contains("start"));
+                assert!(!flow.body.statements.is_empty());
             }
             other => panic!("expected workflow, got {:?}", other),
         }

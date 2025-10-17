@@ -262,9 +262,7 @@ fn parse_task_decl(src: &str, start: usize) -> Option<(ast::Item, usize)> {
             name,
             params,
             return_type,
-            body: ast::Block {
-                raw: body_src.trim().to_string(),
-            },
+            body: build_block(&body_src),
         }),
         idx,
     ))
@@ -288,9 +286,7 @@ fn parse_workflow_decl(src: &str, start: usize) -> Option<(ast::Item, usize)> {
     Some((
         ast::Item::Workflow(ast::WorkflowDecl {
             name,
-            body: ast::Block {
-                raw: body_src.trim().to_string(),
-            },
+            body: build_block(&body_src),
         }),
         idx,
     ))
@@ -318,12 +314,21 @@ fn parse_test_decl(src: &str, start: usize) -> Option<(ast::Item, usize)> {
     Some((
         ast::Item::Test(ast::TestDecl {
             name,
-            body: ast::Block {
-                raw: body_src.trim().to_string(),
-            },
+            body: build_block(&body_src),
         }),
         idx,
     ))
+}
+
+fn build_block(body_src: &str) -> ast::Block {
+    let raw = body_src.trim().to_string();
+    let statements = raw
+        .lines()
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty())
+        .map(|line| ast::Statement::Raw(line.to_string()))
+        .collect();
+    ast::Block { raw, statements }
 }
 
 fn parse_record_fields(body: &str) -> Vec<ast::RecordField> {

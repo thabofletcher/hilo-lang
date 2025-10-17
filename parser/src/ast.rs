@@ -70,6 +70,12 @@ pub struct Param {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Block {
     pub raw: String,
+    pub statements: Vec<Statement>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Statement {
+    Raw(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

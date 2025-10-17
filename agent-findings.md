@@ -27,3 +27,10 @@ This log tracks QA findings for the HILO surface area. Items move to “Resolved
 - Filesystem, networking (including sockets, TLS), concurrency controls, database access, and cryptography primitives are now spelled out (`STANDARD_LIBRARY.md:10-58`).
 
 _Status: 0 open P0 issues. Continue regression-testing future edits against these resolved cases._
+
+## Outstanding Items
+
+- `AGENTS.hilo` introduces custom policy keys (`qa.correctness`, `scope.allow_external_fs_access`, `git.commit.*`) that are not yet described in `hilo/spec/LANGUAGE_SPEC.md`; either document them or annotate as experimental TODOs.
+- Tools declared in `AGENTS.hilo` return `Result` / `Page`, but those record types are not defined in `hilo/spec/STANDARD_LIBRARY.md`; add canonical definitions or adjust the tool signatures.
+- `project/docs/AGENTS.md` should direct agents to `hilo/spec/AGENT-INCLUDE.md` so the bootstrapping flow is consistent with root `AGENTS.md`.
+
